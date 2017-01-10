@@ -4,6 +4,9 @@ import sys
 from sys import argv
 import pickle
 
+#local imports
+from conf import *
+
 #PyBrain imports
 from pybrain.tools.shortcuts import buildNetwork
 from pybrain.datasets import ClassificationDataSet
@@ -24,7 +27,8 @@ class Diabetes():
     	with open('/home/sushil/AI/diabetes_person_test/data/diabetes.csv', 'rb') as csvfile:
             spamreader = csv.reader(csvfile, delimiter=',')
             for row in spamreader:
-                self.data_set.addSample(row[:8], [row[8]])
+                data = [float(x) for x in row if x != '']
+                self.data_set.addSample(data[:8], [data[8]])
 
     def train(self):
         self.data_set._convertToOneOfMany()
@@ -32,13 +36,28 @@ class Diabetes():
         self.trainer.trainEpochs(30)
         # self.trainer.trainUntilConvergence()
 
-    def save(self, file_name="/home/sushil/AI/diabetes_person_test/classifier.diabetes"):
+    def save(self, file_name="classifier.diabetes"):
         with open(get_path(file_name), 'wb') as file_pointer:
             pickle.dump(self.network, file_pointer)
 
-    def load(self, file_name="/home/sushil/AI/diabetes_person_test/classifier.diabetes"):
+    def load(self, file_name="classifier.diabetes"):
         with open(get_path(file_name), 'rb') as file_pointer:
             self.network = pickle.load(file_pointer)
+
+    def accuracy(self):
+        if len(self.data_set) == 0:
+            print "No data_sets found. Maybe you loaded the classifier from a file?"
+            return
+
+        tstresult = percentError(
+                        self.trainer.testOnClassData(dataset=self.data_set),
+                        self.data_set['class']
+                    )
+
+        print "epoch: %4d" % self.trainer.totalepochs, \
+              "trainer error: %5.2f%%" % tstresult, \
+              "trainer accuracy: %5.2f%%" % (100-tstresult)
+
 
     def classify(self,test_data):
             score = self.network.activate(test_data)
@@ -47,9 +66,10 @@ class Diabetes():
             score = max(range(len(score)), key=score.__getitem__)
             print(score)
             if score == 0:
-                return "Not Diabetic"
+                return 0
             else:
-                return "Diabetic"
+                return 1
+
 
 # def main():
 #     filename = 'data/diabetes.csv'
